@@ -83,7 +83,7 @@ public class Client {
     }
 
     public  static void processReply(String reply){
-
+        System.out.println(reply);
         String[] tokenReplies = reply.split(" ");
 
         String genericClientMessage = "Client: "+ operation+" " + tokenReplies[1] + " " + tokenReplies[2];
