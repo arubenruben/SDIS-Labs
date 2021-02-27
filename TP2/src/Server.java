@@ -14,6 +14,7 @@ public class Server {
     private static int unicastPort;
     private static int multicastPort;
     private static InetAddress multicastAddress;
+    final private static int messageSize = 512;
 
     public static void main(String[] args) {
         dnsTable = new HashMap<>();
@@ -36,7 +37,11 @@ public class Server {
             System.out.println("Error in thread executing");
         }
 
-        unicastProcessing();
+        try {
+            unicastProcessing();
+        } catch (IOException e) {
+            System.out.println("Error receiving requests");
+        }
 
         executor.shutdown();
         unicastSocket.close();
@@ -104,10 +109,71 @@ public class Server {
         };
     }
 
-    private static void unicastProcessing() {
+    private static void unicastProcessing() throws IOException {
+        System.out.println("Server Running");
+
         while (true) {
 
+            byte[] buf = new byte[messageSize];
+            DatagramPacket packet = new DatagramPacket(buf, messageSize);
+            unicastSocket.receive(packet);
+            reply(packet);
+
         }
+
+    }
+
+    public static void handleRegisterRequest(DatagramPacket packet, String[] tokenParsedRequest) {
+        if (tokenParsedRequest.length != 3) {
+            System.out.println("Register Request MalFormed");
+            return;
+        }
+        dnsTable.put(tokenParsedRequest[1], tokenParsedRequest[2]);
+        String toReply = dnsTable.size() - 1 + " " + tokenParsedRequest[1] + " " + tokenParsedRequest[2];
+
+        packet.setData(toReply.getBytes());
+        try {
+            unicastSocket.send(packet);
+        } catch (IOException e) {
+            System.out.println("Error sending Reply");
+        }
+
+    }
+
+    public static void handleLookupRequest(DatagramPacket packet, String[] tokenParsedRequest) {
+        if (tokenParsedRequest.length != 2) {
+            System.out.println("Lookup Request MalFormed");
+            return;
+        }
+
+        String IPToReturn = dnsTable.get(tokenParsedRequest[1].trim());
+        String toReply = dnsTable.size() + " " + tokenParsedRequest[1].trim() + " " + IPToReturn;
+
+        packet.setData(toReply.getBytes());
+
+        try {
+            unicastSocket.send(packet);
+        } catch (IOException e) {
+            System.out.println("Error sending Reply");
+        }
+    }
+
+    public static void reply(DatagramPacket packet) {
+
+        String request = new String(packet.getData());
+
+        String[] tokenParsedRequest = request.split(" ");
+
+        System.out.println("Server:" + request);
+
+        if (tokenParsedRequest.length < 2) {
+            System.out.println("Not well formatted Request");
+            return;
+        }
+        if (tokenParsedRequest[0].equals("register"))
+            handleRegisterRequest(packet, tokenParsedRequest);
+        else if (tokenParsedRequest[0].equals("lookup"))
+            handleLookupRequest(packet, tokenParsedRequest);
 
     }
 }
