@@ -1,108 +1,114 @@
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.net.*;
+import java.util.Arrays;
+
+//Multicast protocol: multicast,<mcast_addr>,<mcast_port>
 
 public class Client {
     private static DatagramSocket unicastSocket;
     private static MulticastSocket multicastSocket;
+    private static int multicastPort;
+    private static InetAddress multicastAddress;
 
     public static void main(String[] args) {
-        if (args.length == 5 && !processInputRegister(args)) {
-            System.out.println("Error");
-            return;
-        } else if (args.length == 4 && !processInputLookup(args)) {
-            System.out.println("Error");
-            return;
-        } else {
+
+        if (args.length == 5)
+            handleRegister(args);
+        else if (args.length == 4)
+            handleLookup(args);
+        else {
             System.out.println("Number of parameters invalid");
-            return;
         }
     }
 
-    private static boolean processInputLookup(String[] args) {
 
-        if (!multiCastInitializer(args[0], args[1]))
-            return false;
+    private static void handleRegister(String[] args) {
 
-        if (!uniCastInitializer())
-            return false;
 
-        return true;
+        if (multicastInitializer(args))
+            return;
+        System.out.println("Initialized Multicast");
+        if (!unicastInitializer((receiveUnicastInformation()))) {
+            System.out.println("Error Initializing Unicast Socket");
+            return;
+        }
+
+        return;
     }
 
-    private static boolean processInputRegister(String[] args) {
+    private static void handleLookup(String[] args) {
 
-        if (!multiCastInitializer(args[0], args[1]))
-            return false;
-        if (!uniCastInitializer())
-            return false;
-        return true;
+
+        if (multicastInitializer(args))
+            return;
+
+        if (!unicastInitializer((receiveUnicastInformation()))) {
+            System.out.println("Error Initializing Unicast Socket");
+            return;
+        }
+
+
+        return;
     }
 
-
-    private static boolean multiCastInitializer(String multiCastAddress, String strPort) {
-
-        int multicastPort;
+    private static boolean multicastInitializer(String[] args) {
 
         try {
-            multicastPort = Integer.parseInt(strPort);
+            System.out.println(args[0]);
+            multicastAddress = InetAddress.getByName(args[0]);
+        } catch (UnknownHostException e) {
+            System.out.println("Error Parsing Multicast Address");
+            return true;
+        }
+
+        try {
+            multicastPort = Integer.parseInt(args[1]);
         } catch (NumberFormatException exception) {
             System.out.println("Argument 1 of input not valid");
-            return false;
+            return true;
         }
 
         try {
+            System.out.println(multicastPort);
             multicastSocket = new MulticastSocket(multicastPort);
         } catch (IOException e) {
             System.out.println("Error opening Socket");
-            return false;
+            return true;
         }
         try {
-            multicastSocket.joinGroup(InetAddress.getByName(multiCastAddress));
+            multicastSocket.joinGroup(multicastAddress);
         } catch (IOException e) {
             System.out.println("Error joining the Group");
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
-    private static boolean uniCastInitializer() {
+    private static String receiveUnicastInformation() {
+        byte[] receivingBuf = new byte[512];
 
-
-        int unicastPort;
-
+        DatagramPacket response = new DatagramPacket(receivingBuf, receivingBuf.length);
+        System.out.println("Parado");
         try {
-            //unicastPort = Integer.parseInt();
-        } catch (NumberFormatException exception) {
-            System.out.println("Argument 1 of input not valid");
-            return false;
+            multicastSocket.receive(response);
+            System.out.println(response);
+        } catch (IOException e) {
+            System.out.println("Error while receiving reply from register");
+            return null;
         }
 
-        return true;
+        return new String(response.getData());
     }
-        /*
-    public static boolean processInput(String[] args) {
 
+    private static boolean unicastInitializer(String response) {
 
-
-        try {
-            unicastPort = Integer.parseInt(args[0]);
-        } catch (NumberFormatException exception) {
-            System.out.println("Argument 1 of input not valid");
+        if (response == null)
             return false;
-        }
-        int unicastPort;
 
+        String[] tokenReplies = response.split(",");
 
-        try {
-            unicastSocket = new DatagramSocket(unicastPort);
-        } catch (SocketException e) {
-            System.out.println("Error opening Socket");
-            return false;
-        }
+        System.out.println(Arrays.toString(tokenReplies));
 
         return true;
     }
-         */
 }
