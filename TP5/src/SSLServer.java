@@ -34,8 +34,8 @@ public class SSLServer {
 
             serverSocket.setNeedClientAuth(true);
 
-            //serverSocket.setEnabledProtocols(serverSocket.getEnabledProtocols());
-            //serverSocket.setEnabledCipherSuites(cypherSuites);
+            serverSocket.setEnabledProtocols(serverSocket.getEnabledProtocols());
+            serverSocket.setEnabledCipherSuites(cypherSuites);
 
         } catch (IOException e) {
             e.printStackTrace();
